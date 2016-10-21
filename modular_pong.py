@@ -29,9 +29,9 @@ class Actor():
         return p
 
 class Agent():
-    def __init__(self, n_obs, n_actions, gamma=0.99, actor_lr = 1e-4, decay=0.95, epsilon_decay = 0.95):
+    def __init__(self, n_obs, n_actions, gamma=0.99, actor_lr = 1e-4, decay=0.95, epsilon = 0.1):
         self.gamma = gamma            # discount factor for reward
-        self.epsilon_decay = epsilon_decay
+        self.epsilon = epsilon
         self.global_step = 0
         self.xs, self.rs, self.ys = [],[],[]
         
@@ -70,10 +70,7 @@ class Agent():
     def act(self, x):
         feed = {self.x: x}
         aprob = self.sess.run(self.aprob, feed) ; aprob = aprob[0,:]
-        if np.random.rand() > .5*self.epsilon_decay**self.global_step:
-            action = np.random.choice(self.n_actions, p=aprob)
-        else:
-            action = np.random.randint(self.n_actions)
+        action = np.random.choice(self.n_actions,p=aprob) if np.random.rand() > self.epsilon else np.random.randint(self.n_actions)
         
         label = np.zeros_like(aprob) ; label[action] = 1
         self.xs.append(x)
@@ -88,7 +85,7 @@ class Agent():
         self.xs, self.rs, self.ys = [],[],[] # reset game history
         
         feed = {self.x: epx, self.r: epr, self.y: epy}
-        _ = self.sess.run(self.train_op,feed) # parameter update
+        if self.global_step > 100: _ = self.sess.run(self.train_op,feed) # parameter update
         self.global_step += 1
         
     def try_load_model(self):
@@ -129,14 +126,14 @@ def plt_dynamic(x, y, ax, colors=['b']):
         ax.plot(x, y, color)
     fig.canvas.draw()
 
-n_obs = 2*75*100   # dimensionality of observations
+n_obs = 75*100   # dimensionality of observations
 n_actions = 3
-agent = Agent(n_obs, n_actions, gamma = 0.99, actor_lr=1e-4, decay=0.99, epsilon_decay = 0.95)
-agent.try_load_model()
+agent = Agent(n_obs, n_actions, gamma = 0.99, actor_lr=1e-3, decay=0.99, epsilon = 0.1)
+# agent.try_load_model()
 
 env = gym.make("Pong-v0")
 observation = env.reset()
-cur_x = None
+prev_x = None
 running_reward = -21 # usually starts around 10 for cartpole
 reward_sum = 0
 episode_number = agent.global_step
@@ -146,9 +143,9 @@ while True:
 #     if episode_number%25==0: env.render()
 
     # preprocess the observation, set input to network to be difference image
-    prev_x = cur_x if cur_x is not None else np.zeros(n_obs/2)
     cur_x = prepro(observation)
-    x = np.concatenate((cur_x, prev_x))
+    x = cur_x - prev_x if prev_x is not None else np.zeros(n_obs)
+    prev_x = cur_x
 
     # stochastically sample a policy from the network
     action = agent.act(np.reshape(x, (1,-1)))

@@ -1,2 +1,3 @@
-model_checkpoint_path: "pong.ckpt-1"
+model_checkpoint_path: "pong.ckpt-51"
 all_model_checkpoint_paths: "pong.ckpt-1"
+all_model_checkpoint_paths: "pong.ckpt-51"
