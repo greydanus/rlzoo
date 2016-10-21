@@ -29,9 +29,9 @@ class Actor():
         return p
 
 class Agent():
-    def __init__(self, n_obs, n_actions, gamma=0.99, actor_lr = 1e-4, decay=0.95, epsilon = 0.1):
+    def __init__(self, n_obs, n_actions, gamma=0.99, actor_lr = 1e-4, decay=0.95, epsilon_decay = 0.95):
         self.gamma = gamma            # discount factor for reward
-        self.epsilon = epsilon
+        self.epsilon_decay = epsilon_decay
         self.global_step = 0
         self.xs, self.rs, self.ys = [],[],[]
         
@@ -70,7 +70,7 @@ class Agent():
     def act(self, x):
         feed = {self.x: x}
         aprob = self.sess.run(self.aprob, feed) ; aprob = aprob[0,:]
-        if np.random.rand() > self.epsilon:
+        if np.random.rand() > .5*self.epsilon_decay**self.global_step:
             action = np.random.choice(self.n_actions, p=aprob)
         else:
             action = np.random.randint(self.n_actions)
@@ -131,7 +131,7 @@ def plt_dynamic(x, y, ax, colors=['b']):
 
 n_obs = 2*75*100   # dimensionality of observations
 n_actions = 3
-agent = Agent(n_obs, n_actions, gamma = 0.99, actor_lr=1e-4, decay=0.99, epsilon = 0.1)
+agent = Agent(n_obs, n_actions, gamma = 0.99, actor_lr=1e-4, decay=0.99, epsilon_decay = 0.95)
 agent.try_load_model()
 
 env = gym.make("Pong-v0")
