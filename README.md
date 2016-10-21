@@ -12,8 +12,11 @@ Notebooks
 There are several notebooks here. Some of them are under active development.
 
 First I solved Cartpole as a toy problem (I know that pg is overkill)
+
 ![Cartpole gif](static/gym_cartpole.gif)
+
 Then I used the same algorithm to solve something trickier - Atari Pong!
+
 ![Pong gif](static/gym_pong.gif)
 
 Code for both of these was derived in part from karpathy's excellent [deep rl post](https://karpathy.github.io/2016/05/31/rl/).
