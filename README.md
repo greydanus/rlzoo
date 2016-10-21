@@ -1,4 +1,4 @@
-# rlzoo
+# Reinforcement Learning Zoo
 A central location for my reinforcement learning experiments
 
 Gists
