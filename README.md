@@ -1,10 +1,6 @@
 # rlzoo
 A central location for my reinforcement learning experiments
 
-rlzoo
-=======
-A central location for my reinforcement learning experiments
-
 Gists
 --------
 For minimalist, concept-based code:
@@ -16,7 +12,7 @@ Notebooks
 There are several notebooks here. Some of them are under active development.
 
 First I solved Cartpole as a toy problem (I know that pg is overkill)
-![Cartpole gif](static/gym_cartpole.gif)
+![Cartpole gif](static/gym_cartpole.mov)
 Then I used the same algorithm to solve something trickier - Atari Pong!
 ![Pong gif](static/gym_pong.gif)
 
