@@ -14,7 +14,7 @@ class Actor():
         self.model = model = {}
         with tf.variable_scope('actor',reuse=False):
             # convolutional layer 1
-            self.model['Wc1'] = tf.Variable(tf.truncated_normal([5, 5, 2, 8], stddev=0.1))
+            self.model['Wc1'] = tf.Variable(tf.truncated_normal([5, 5, 1, 8], stddev=0.1))
             self.model['bc1'] = tf.Variable(tf.constant(0.1, shape=[8]))
 
             # convolutional layer 2
@@ -29,8 +29,8 @@ class Actor():
             self.model['W4'] = tf.Variable(tf.truncated_normal([8, n_actions], stddev=0.1))
             self.model['b4'] = tf.Variable(tf.constant(0.1, shape=[n_actions]))
             
-    def policy_forward(self, x):
-        x_image = tf.reshape(x, [-1, 105, 80, 2])
+    def policy_forward(self, x): #x ~ [1,D]
+        x_image = tf.reshape(x, [-1, 105, 80, 1])
                                       
         zc1 = tf.nn.conv2d(x_image, self.model['Wc1'], strides=[1, 1, 1, 1], padding='SAME') + self.model['bc1']
         hc1 = tf.nn.relu(zc1)
@@ -39,11 +39,11 @@ class Actor():
         zc2 = tf.nn.conv2d(hc1, self.model['Wc2'], strides=[1, 1, 1, 1], padding='SAME') + self.model['bc2']
         hc2 = tf.nn.relu(zc2)
         hc2 = tf.nn.max_pool(hc2, ksize=[1, 4, 4, 1], strides=[1, 4, 4, 1], padding='SAME')
-        print hc2.get_shape()
+        print "hc2 shape", hc2.get_shape()
         
         hc2_flat = tf.reshape(hc2, [-1, 14*10*8])
         h3 = tf.nn.relu(tf.matmul(hc2_flat, self.model['W3']) + self.model['b3'])
-        h3 = tf.nn.dropout(h3, 0.9)
+        h3 = tf.nn.dropout(h3, 0.8)
         
         h4 = tf.matmul(h3, self.model['W4']) + self.model['b4']
         return tf.nn.softmax(h4)
@@ -88,8 +88,8 @@ class Agent():
         self.saver = tf.train.Saver(tf.all_variables())
     
     def act(self, x):
-        aprob = self.sess.run(self.aprob, {self.x: x})
-        aprob = aprob[0,:]
+        feed = {self.x: x}
+        aprob = self.sess.run(self.aprob, feed) ; aprob = aprob[0,:]
         action = np.random.choice(self.n_actions,p=aprob) if np.random.rand() > self.epsilon else np.random.randint(self.n_actions)
         
         label = np.zeros_like(aprob) ; label[action] = 1
@@ -136,24 +136,23 @@ class Agent():
 # downsampling
 def prepro(o):
     rgb = o
-    gray = 0.3*rgb[:,:,0:1] + 0.4*rgb[:,:,1:2] + 0.3*rgb[:,:,2:3]
-    gray = gray[::2,::2,:]
+    gray = 0.3*rgb[:,:,0] + 0.4*rgb[:,:,1] + 0.3*rgb[:,:,2]
+    gray = gray[::2,::2]
     gray -= np.mean(gray) ; gray /= 100
-    return gray.astype(np.float)
+    return gray.astype(np.float).ravel()
 
-n_obs = 2*105*80   # dimensionality of observations
+n_obs = 105*80   # dimensionality of observations
 n_actions = 3
-agent = Agent(n_obs, n_actions, gamma = 0.99, actor_lr=1e-3, decay=0.99, epsilon = 0.1)
-agent.try_load_model()
+agent = Agent(n_obs, n_actions, gamma = 0.99, actor_lr=5e-4, decay=0.99, epsilon = 0.1)
+# agent.try_load_model()
 
 env = gym.make("Pong-v0")
 observation = env.reset()
-cur_x = None
+prev_x = None
 running_reward = -20.48 # usually starts around 10 for cartpole
 reward_sum = 0
 episode_number = agent.global_step
 
-# print model params
 total_parameters = 0 ; print "Model overview:"
 for variable in tf.trainable_variables():
     shape = variable.get_shape()
@@ -165,14 +164,18 @@ for variable in tf.trainable_variables():
     total_parameters += variable_parameters
 print "Total of {} parameters".format(total_parameters)
 
+
 print 'episode {}: starting up...'.format(episode_number)
 while True:
 #     if episode_number%25==0: env.render()
 
     # preprocess the observation, set input to network to be difference image
-    prev_x = cur_x if cur_x is not None else np.zeros((105,80,1))
+#     prev_x = cur_x if cur_x is not None else np.zeros(n_obs/2)
+#     cur_x = prepro(observation)
+#     x = np.concatenate((cur_x, prev_x))
     cur_x = prepro(observation)
-    x = np.concatenate((cur_x, prev_x),axis=-1).ravel()
+    x = cur_x - prev_x if prev_x is not None else np.zeros(n_obs)
+    prev_x = cur_x
 
     # stochastically sample a policy from the network
     action = agent.act(np.reshape(x, (1,-1)))
@@ -192,8 +195,9 @@ while True:
             print '\tep: {}, reward: {}'.format(episode_number, reward_sum)
             feed = {agent.x: np.reshape(x, (1,-1))}
             aprob = agent.sess.run(agent.aprob, feed) ; aprob = aprob[0,:]
+            print'\t', aprob
             
-        if episode_number % 50 == 0: agent.save() ; print "SAVED MODEL #{}".format(agent.global_step)
+#         if episode_number % 50 == 0: agent.save() ; print "SAVED MODEL #{}".format(agent.global_step)
         
         # lame stuff
         cur_x = None
