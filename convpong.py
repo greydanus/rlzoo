@@ -128,7 +128,7 @@ class Agent():
         
     @staticmethod
     def discount_rewards(r, gamma):
-        discount_f = lambda a, v: a*gamma + v;
+        discount_f = lambda a, v: (a*gamma + v)*(1-tf.abs(v)) + (v)*tf.abs(v);
         r_reverse = tf.scan(discount_f, tf.reverse(r,[True, False]))
         discounted_r = tf.reverse(r_reverse,[True, False])
         return discounted_r
