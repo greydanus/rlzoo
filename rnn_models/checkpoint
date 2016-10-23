@@ -1,0 +1,6 @@
+model_checkpoint_path: "pong.ckpt-201"
+all_model_checkpoint_paths: "pong.ckpt-1"
+all_model_checkpoint_paths: "pong.ckpt-51"
+all_model_checkpoint_paths: "pong.ckpt-101"
+all_model_checkpoint_paths: "pong.ckpt-151"
+all_model_checkpoint_paths: "pong.ckpt-201"
